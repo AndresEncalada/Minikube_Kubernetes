@@ -47,3 +47,59 @@ kubectl scale deployment worker --replicas=3
 #Ver logs
 # Sigue los logs
 kubectl logs -f nombrePod
+
+
+
+
+
+
+:: Crear el deployment con la imagen nginxdemos/hello
+kubectl create deployment web-server --image=nginxdemos/hello:latest --replicas=1
+
+:: EVIDENCIA 1
+kubectl get deployments
+kubectl get pods
+
+:: A. Crear servicio tipo ClusterIP (Interno)
+kubectl expose deployment web-server --port=80 --target-port=80 --type=ClusterIP --name=web-service
+
+:: B. Confirmar que responde dentro del clúster
+:: Primero obtén la IP (anótala)
+kubectl get svc web-service
+
+:: Entra a minikube (Linux)
+minikube ssh
+
+:: --- DENTRO DE MINIKUBE (Esto es Linux) ---
+:: Escribe: curl <LA-IP-QUE-ANOTASTE>
+:: Luego escribe: exit
+:: --- FIN MINIKUBE ---
+
+:: C. Modificar a NodePort (Hacerlo público)
+:: ¡OJO! En CMD las comillas del JSON deben escaparse con backslash \
+kubectl patch service web-service -p "{\"spec\": {\"type\": \"NodePort\"}}"
+
+:: D. Validar acceso externo (EVIDENCIA 3)
+minikube service web-service
+
+Scaling 
+:: Subir a 4 réplicas
+kubectl scale deployment web-server --replicas=4
+
+:: EVIDENCIA 4
+kubectl get pods
+
+
+Actualización 
+
+:: Cambiar la imagen a nginx:alpine
+:: El * indica "todos los contenedores del deployment"
+kubectl set image deployment/web-server *=nginx:alpine
+
+:: Ver cómo se actualizan (Presiona Ctrl+C para salir cuando terminen)
+kubectl get pods -w
+
+:: Verificar el cambio visualmente (EVIDENCIA 5)
+minikube service web-service
+
+
