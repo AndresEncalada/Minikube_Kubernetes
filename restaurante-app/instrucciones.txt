@@ -34,3 +34,8 @@ minikube service frontend-service
 
 #Borrar todos
 kubectl delete all --all
+#Borrar uno
+kubectl delete pod nombrePod
+
+#Escalar
+kubectl scale deployment worker --replicas=3
