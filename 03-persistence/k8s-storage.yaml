@@ -1,0 +1,51 @@
+# 1. Solicitud de Volumen (PVC)
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: redis-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+  # En Minikube, el storageClassName suele ser 'standard' por defecto
+
+---
+# 2. Deployment de Redis con Volumen
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis-db
+spec:
+  replicas: 1 # Bases de datos simples suelen ser 1 replica
+  selector:
+    matchLabels:
+      app: redis
+  template:
+    metadata:
+      labels:
+        app: redis
+    spec:
+      containers:
+      - name: redis
+        image: redis:6-alpine
+        volumeMounts:
+        - name: redis-storage
+          mountPath: /data # Redis guarda aquí sus datos por defecto
+      volumes:
+      - name: redis-storage
+        persistentVolumeClaim:
+          claimName: redis-pvc # Conectamos con el PVC de arriba
+
+---
+# 3. Servicio para acceder a Redis
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-service
+spec:
+  ports:
+    - port: 6379
+  selector:
+    app: redis

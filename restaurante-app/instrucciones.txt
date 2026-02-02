@@ -1,0 +1,36 @@
+# Abir docker
+# Ejecutar minikube
+minikube start
+
+# powershell
+minikube -p minikube docker-env --shell powershell | Invoke-Expression
+
+#CMD
+@FOR /f "tokens=*" %i IN ('minikube -p minikube docker-env --shell cmd') DO @%i
+
+# 1. Backend
+cd restaurante-app/backend
+docker build -t tu-usuario/restaurante-backend:v1 .
+
+# 2. Worker
+cd ../worker
+docker build -t tu-usuario/restaurante-worker:v1 .
+
+# 3. Frontend
+cd ../frontend
+docker build -t tu-usuario/restaurante-frontend:v1 .
+
+cd ../..
+
+
+# Desplegar
+kubectl apply -f restaurante-app/k8s-completo.yaml
+
+# Verifica que los 5 pods estén corriendo (Mongo, Redis, Back, Front, Worker)
+kubectl get pods
+
+# Abre la aplicación
+minikube service frontend-service
+
+#Borrar todos
+kubectl delete all --all

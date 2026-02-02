@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html>
+<body>
+    <h2>Prueba WebSocket K8s</h2>
+    <div id="msg"></div>
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        var socket = io();
+        socket.on('mensaje', function(msg) {
+            document.getElementById("msg").innerHTML = msg;
+        });
+    </script>
+</body>
+</html>

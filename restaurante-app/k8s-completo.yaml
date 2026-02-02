@@ -1,0 +1,196 @@
+# ==========================================
+# 1. REDIS (Cola de Mensajes)
+# ==========================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redis
+  template:
+    metadata:
+      labels:
+        app: redis
+    spec:
+      containers:
+      - name: redis
+        image: redis:6-alpine
+        ports:
+        - containerPort: 6379
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-service # El Backend y Worker usan este nombre
+spec:
+  ports:
+    - port: 6379
+  selector:
+    app: redis
+
+---
+# ==========================================
+# 2. MONGODB (Persistencia)
+# ==========================================
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mongo-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mongo
+spec:
+  selector:
+    matchLabels:
+      app: mongo
+  template:
+    metadata:
+      labels:
+        app: mongo
+    spec:
+      containers:
+      - name: mongo
+        image: mongo:4.4
+        ports:
+        - containerPort: 27017
+        volumeMounts:
+        - name: mongo-storage
+          mountPath: /data/db
+      volumes:
+      - name: mongo-storage
+        persistentVolumeClaim:
+          claimName: mongo-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongo-service # El Backend usa este nombre
+spec:
+  ports:
+    - port: 27017
+  selector:
+    app: mongo
+
+---
+# ==========================================
+# 3. BACKEND (API REST)
+# ==========================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      labels:
+        app: backend
+    spec:
+      containers:
+      - name: backend
+        image: tu-usuario/restaurante-backend:v1 # CAMBIAR NOMBRE
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 5000
+        env:
+        - name: MONGO_URI
+          value: "mongodb://mongo-service:27017/"
+        - name: REDIS_HOST
+          value: "redis-service"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend-service
+spec:
+  selector:
+    app: backend
+  ports:
+    - protocol: TCP
+      port: 5000
+      targetPort: 5000
+
+---
+# ==========================================
+# 4. WORKER (Procesador de Cola)
+# ==========================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: worker
+spec:
+  replicas: 1 # Puedes subirlo a 2 para cocinar más rápido
+  selector:
+    matchLabels:
+      app: worker
+  template:
+    metadata:
+      labels:
+        app: worker
+    spec:
+      containers:
+      - name: worker
+        image: tu-usuario/restaurante-worker:v1 # CAMBIAR NOMBRE
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: MONGO_URI
+          value: "mongodb://mongo-service:27017/"
+        - name: REDIS_HOST
+          value: "redis-service"
+# NOTA: El Worker NO tiene Service porque nadie le habla a él.
+# Él inicia la comunicación hacia Redis.
+
+---
+# ==========================================
+# 5. FRONTEND (Interfaz Web)
+# ==========================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: frontend
+  template:
+    metadata:
+      labels:
+        app: frontend
+    spec:
+      containers:
+      - name: frontend
+        image: tu-usuario/restaurante-frontend:v1 # CAMBIAR NOMBRE
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 3000
+        env:
+        - name: BACKEND_URL
+          value: "http://backend-service:5000"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend-service
+spec:
+  type: NodePort # Para acceder desde el navegador
+  selector:
+    app: frontend
+  ports:
+    - port: 80
+      targetPort: 3000
+      nodePort: 30005
