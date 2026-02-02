@@ -1,0 +1,113 @@
+# ========================
+# 1. SERVICIO A (LÍDER)
+# ========================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: servicio-a
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: servicio-a
+  template:
+    metadata:
+      labels:
+        app: servicio-a
+    spec:
+      containers:
+      - name: app
+        image: tu-usuario/anillo-lider:v1
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: NEXT_SERVICE
+          value: "http://servicio-b:5000" # A apunta a B
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: servicio-a
+spec:
+  selector:
+    app: servicio-a
+  ports:
+    - port: 5000
+  type: NodePort # Para que tú puedas iniciar el anillo desde fuera
+
+---
+# ========================
+# 2. SERVICIO B (INTERMEDIO)
+# ========================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: servicio-b
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: servicio-b
+  template:
+    metadata:
+      labels:
+        app: servicio-b
+    spec:
+      containers:
+      - name: app
+        image: tu-usuario/anillo-relay:v1 # Usamos la imagen genérica
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: MY_NAME
+          value: "Servicio-B"
+        - name: NEXT_SERVICE
+          value: "http://servicio-c:5000" # B apunta a C
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: servicio-b
+spec:
+  selector:
+    app: servicio-b
+  ports:
+    - port: 5000
+
+---
+# ========================
+# 3. SERVICIO C (EL ÚLTIMO)
+# ========================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: servicio-c
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: servicio-c
+  template:
+    metadata:
+      labels:
+        app: servicio-c
+    spec:
+      containers:
+      - name: app
+        image: tu-usuario/anillo-relay:v1 # Misma imagen genérica
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: MY_NAME
+          value: "Servicio-C"
+        - name: NEXT_SERVICE
+          value: "http://servicio-a:5000" # C cierra el anillo apuntando a A
+        - name: IS_LAST
+          value: "yes" # ¡IMPORTANTE! Avisa que debe llamar a /finish
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: servicio-c
+spec:
+  selector:
+    app: servicio-c
+  ports:
+    - port: 5000

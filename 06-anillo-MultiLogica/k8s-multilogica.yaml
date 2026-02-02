@@ -1,0 +1,121 @@
+# ==========================================
+# NODO 1: MAYUSCULAS (Inicia el proceso)
+# ==========================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nodo-a
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nodo-a
+  template:
+    metadata:
+      labels:
+        app: nodo-a
+    spec:
+      containers:
+      - name: app
+        image: tu-usuario/logica-mixta:v1  # <--- Misma imagen para todos
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: MY_NAME
+          value: "Nodo-A"
+        - name: LOGIC_TYPE
+          value: "UPPER"               # <--- AQUÍ CAMBIA LA LÓGICA
+        - name: NEXT_SERVICE
+          value: "http://nodo-b-service:5000"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nodo-a-service
+spec:
+  type: NodePort # Para iniciar desde navegador
+  selector:
+    app: nodo-a
+  ports:
+    - port: 80
+      targetPort: 5000
+      nodePort: 30006
+
+---
+# ==========================================
+# NODO 2: REVERSO (Intermedio)
+# ==========================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nodo-b
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nodo-b
+  template:
+    metadata:
+      labels:
+        app: nodo-b
+    spec:
+      containers:
+      - name: app
+        image: tu-usuario/logica-mixta:v1
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: MY_NAME
+          value: "Nodo-B"
+        - name: LOGIC_TYPE
+          value: "REVERSE"             # <--- AQUÍ CAMBIA LA LÓGICA
+        - name: NEXT_SERVICE
+          value: "http://nodo-c-service:5000"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nodo-b-service
+spec:
+  selector:
+    app: nodo-b
+  ports:
+    - port: 5000
+
+---
+# ==========================================
+# NODO 3: CONTADOR (Final)
+# ==========================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nodo-c
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nodo-c
+  template:
+    metadata:
+      labels:
+        app: nodo-c
+    spec:
+      containers:
+      - name: app
+        image: tu-usuario/logica-mixta:v1
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: MY_NAME
+          value: "Nodo-C"
+        - name: LOGIC_TYPE
+          value: "COUNTER"             # <--- AQUÍ CAMBIA LA LÓGICA
+        - name: IS_LAST
+          value: "yes"                 # <--- ESTE TERMINA LA CADENA
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nodo-c-service
+spec:
+  selector:
+    app: nodo-c
+  ports:
+    - port: 5000

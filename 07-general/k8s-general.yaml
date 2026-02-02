@@ -1,0 +1,83 @@
+# ==========================================
+# 1. CONFIGURACIÓN (Variables de Entorno)
+# ==========================================
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: config-maestra
+data:
+  # Estas son las variables que leerá tu script de Python
+  nombre-servicio: "Servicio-Principal"
+  url-objetivo: "http://otro-servicio:5000"
+  # Si tienes Mongo y Redis desplegados, usa estos valores:
+  mongo-uri: "mongodb://mongo-service:27017/"
+  redis-host: "redis-service"
+
+---
+# ==========================================
+# 2. EL DESPLIEGUE (Deployment)
+# ==========================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app-maestra
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mi-app
+  template:
+    metadata:
+      labels:
+        app: mi-app
+    spec:
+      containers:
+      - name: contenedor-python
+        # ¡OJO! Aquí va el nombre que le diste al hacer 'docker build'
+        image: tu-usuario/script-maestro:v1  
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 5000
+        env:
+        # AQUI SE CONECTA EL PYTHON CON EL YAML
+        # -------------------------------------
+        - name: MY_NAME           # Variable en Python
+          valueFrom:
+            configMapKeyRef:
+              name: config-maestra
+              key: nombre-servicio
+              
+        - name: TARGET_URL        # Variable en Python
+          valueFrom:
+            configMapKeyRef:
+              name: config-maestra
+              key: url-objetivo
+              
+        - name: MONGO_URI         # Variable en Python
+          valueFrom:
+            configMapKeyRef:
+              name: config-maestra
+              key: mongo-uri
+              
+        - name: REDIS_HOST        # Variable en Python
+          valueFrom:
+            configMapKeyRef:
+              name: config-maestra
+              key: redis-host
+
+---
+# ==========================================
+# 3. EL ACCESO (Service)
+# ==========================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: servicio-maestro
+spec:
+  type: NodePort  # Para verlo en el navegador con 'minikube service ...'
+  selector:
+    app: mi-app
+  ports:
+    - port: 80         # Puerto del servicio (el que usas en la URL interna)
+      targetPort: 5000 # Puerto de tu Flask (app.py)
+      nodePort: 30007  # Puerto fijo para el navegador (opcional)

@@ -39,3 +39,7 @@ kubectl delete pod nombrePod
 
 #Escalar
 kubectl scale deployment worker --replicas=3
+
+#Ver logs
+# Sigue los logs
+kubectl logs -f nombrePod
