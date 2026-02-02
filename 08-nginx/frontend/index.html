@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Examen Frontend</title>
+</head>
+<body>
+    <h1>Prueba de Arquitectura 2 Capas</h1>
+    <button onclick="llamarBackend()">Consultar Backend</button>
+    <p id="resultado">Esperando...</p>
+
+    <script>
+        function llamarBackend() {
+            // El frontend llama a su propia ruta /api/info
+            // Nginx redirige esto internamente al backend
+            fetch('/api/info')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('resultado').innerText = 
+                        "Color recibido: " + data.color_secreto;
+                })
+                .catch(err => {
+                    document.getElementById('resultado').innerText = "Error: " + err;
+                });
+        }
+    </script>
+</body>
+</html>

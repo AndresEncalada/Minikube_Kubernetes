@@ -1,0 +1,76 @@
+# ===========================
+# BACKEND (Privado)
+# ===========================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      labels:
+        app: backend
+    spec:
+      containers:
+      - name: api
+        image: andres/examen-backend:v1
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 5000
+        env:
+        - name: APP_COLOR
+          value: "azul"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend-service  # Nombre DNS importante
+spec:
+  type: ClusterIP        # NO accesible desde fuera directo
+  selector:
+    app: backend
+  ports:
+    - port: 5000
+      targetPort: 5000
+
+---
+# ===========================
+# FRONTEND (Público)
+# ===========================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: frontend
+  template:
+    metadata:
+      labels:
+        app: frontend
+    spec:
+      containers:
+      - name: nginx
+        image: andres/examen-frontend:v1 
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend-service
+spec:
+  type: NodePort         # Accesible desde navegador
+  selector:
+    app: frontend
+  ports:
+    - port: 80
+      targetPort: 80
+      nodePort: 30020    # Puerto fijo

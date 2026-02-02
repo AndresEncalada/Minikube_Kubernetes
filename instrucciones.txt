@@ -1,6 +1,10 @@
 # Abir docker
 # Ejecutar minikube
 minikube start
+minikube start --driver=docker
+
+# Borrar clusters viejos
+minikube delete
 
 # powershell
 minikube -p minikube docker-env --shell powershell | Invoke-Expression
